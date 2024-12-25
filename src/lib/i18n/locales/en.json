@@ -1,0 +1,19 @@
+{
+  "goals": {
+    "title": "Your Goals",
+    "noObjectives": "No objectives yet",
+    "shortTerm": "Short Term",
+    "mediumTerm": "Medium Term",
+    "longTerm": "Long Term",
+    "noGoals": "No {type}-term goals yet",
+    "getTasks": "Get Tasks",
+    "actionableTasks": "Actionable Tasks:",
+    "difficulty": "Difficulty: {level}",
+    "time": "Time: {duration}"
+  },
+  "chat": {
+    "placeholder": "Ask your AI companion...",
+    "send": "Send",
+    "planUpdated": "I've updated your goals above! Check them out!"
+  }
+} 

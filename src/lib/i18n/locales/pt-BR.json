@@ -1,0 +1,19 @@
+{
+  "goals": {
+    "title": "Seus Objetivos",
+    "noObjectives": "Ainda sem objetivos",
+    "shortTerm": "Curto Prazo",
+    "mediumTerm": "Médio Prazo",
+    "longTerm": "Longo Prazo",
+    "noGoals": "Sem metas de {type} prazo ainda",
+    "getTasks": "Ver Tarefas",
+    "actionableTasks": "Tarefas Acionáveis:",
+    "difficulty": "Dificuldade: {level}",
+    "time": "Tempo: {duration}"
+  },
+  "chat": {
+    "placeholder": "Pergunte ao seu assistente IA...",
+    "send": "Enviar",
+    "planUpdated": "Atualizei seus objetivos acima! Confira!"
+  }
+} 

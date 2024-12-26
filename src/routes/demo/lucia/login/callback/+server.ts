@@ -1,10 +1,8 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
-import * as table from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
 import { generateSessionToken, createSession, setSessionTokenCookie } from '$lib/server/auth';
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } from '$env/static/private';
+import { createUser, findUserByEmail } from '$lib/server/db/queries';
 
 interface GoogleUser {
 	email: string;
@@ -91,26 +89,4 @@ async function getGoogleUser(accessToken: string): Promise<GoogleUser> {
 	}
 
 	return response.json();
-}
-
-async function findUserByEmail(email: string) {
-	console.log('🔍 Finding user by email:', email);
-	const [user] = await db
-		.select()
-		.from(table.user)
-		.where(eq(table.user.username, email));
-	return user;
-}
-
-async function createUser(userData: GoogleUser) {
-	console.log('🔄 Creating user:', userData.email);
-	const user = {
-		id: crypto.randomUUID(),
-		username: userData.email,
-		age: null,
-		passwordHash: ''
-	};
-
-	await db.insert(table.user).values(user);
-	return user;
 }

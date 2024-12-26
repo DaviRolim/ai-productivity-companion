@@ -5,10 +5,7 @@ import type { RequestHandler } from './$types';
 import { ACTION_PLAN_PROMPT, ACTION_PLAN_PROMPT_PT } from '$lib/prompts';
 import { ActionableTasksSchema } from '$lib/schemas';
 import { zodResponseFormat } from 'openai/helpers/zod';
-import { db } from '$lib/server/db';
-import { task, goal } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { createTasksForGoal, findGoalByAction } from '$lib/server/db/queries';
 
 const openai = new OpenAI({
 	apiKey: OPENAI_API_KEY
@@ -88,10 +85,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		
 		try {
             console.log('Looking up goal in database...');
-            // Find the goal ID for this short-term goal
-            const goalRecord = await db.query.goal.findFirst({
-                where: eq(goal.action, shortTermGoal)
-            });
+            const goalRecord = await findGoalByAction(shortTermGoal);
 
             if (!goalRecord) {
                 console.log('Goal not found in database:', shortTermGoal);
@@ -104,29 +98,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 );
             }
             console.log('Found goal record:', goalRecord.id);
-
-            const now = new Date();
             
             // Save tasks to database
             console.log(`Processing ${parsedResponse.objective.tasks.length} tasks...`);
-            for (const taskItem of parsedResponse.objective.tasks) {
-                try {
-                    await db.insert(task).values({
-                        id: nanoid(),
-                        goalId: goalRecord.id,
-                        description: taskItem.description,
-                        difficultyLevel: taskItem.difficulty_level,
-                        estimatedTime: taskItem.estimated_time,
-                        completed: false,
-                        createdAt: now,
-                        updatedAt: now
-                    });
-                    console.log('Added task:', taskItem.description.substring(0, 50) + '...');
-                } catch (error) {
-                    console.error('Error inserting task:', error);
-                    throw error;
-                }
-            }
+            await createTasksForGoal(goalRecord.id, parsedResponse.objective.tasks);
             console.log('Database operations completed successfully');
 
             return json({

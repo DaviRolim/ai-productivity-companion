@@ -5,9 +5,8 @@ import type { RequestHandler } from './$types';
 import { SYSTEM_PROMPT, SYSTEM_PROMPT_PT } from '$lib/prompts';
 import { ActionPlanSchema } from '$lib/schemas';
 import { zodResponseFormat } from 'openai/helpers/zod';
-import { db } from '$lib/server/db';
-import { actionPlan, objective, goal } from '$lib/server/db/schema';
-import { nanoid } from 'nanoid';
+import { createActionPlanWithObjectivesAndGoals } from '$lib/server/db/queries';
+import { invalidateCache } from '$lib/server/cache';
 
 const openai = new OpenAI({
 	apiKey: OPENAI_API_KEY
@@ -89,99 +88,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             }, { status: 500 });
         }
 
-		// Save to database
-		const now = new Date();
-		console.log('Starting database operations...');
-		
+		// Save to database using centralized query
 		try {
             console.log('Attempting to create action plan...');
-            // Create action plan
-            const newActionPlan = await db.insert(actionPlan).values({
-                id: nanoid(),
-                userId: locals.user.id,
-                createdAt: now,
-                updatedAt: now
-            }).returning().get();
-            console.log('Action plan created with ID:', newActionPlan.id);
-
-            // Create objectives and goals
-            console.log(`Processing ${parsedResponse.objectives.length} objectives...`);
-            for (const obj of parsedResponse.objectives) {
-                try {
-                    console.log('Creating objective:', obj.name);
-                    const newObjective = await db.insert(objective).values({
-                        id: nanoid(),
-                        actionPlanId: newActionPlan.id,
-                        name: obj.name,
-                        createdAt: now,
-                        updatedAt: now
-                    }).returning().get();
-                    console.log('Created objective:', newObjective.id);
-
-                    // Insert goals
-                    console.log(`Adding goals for objective ${newObjective.id}`);
-                    console.log(`- Short-term goals: ${obj.short_term.length}`);
-                    console.log(`- Medium-term goals: ${obj.medium_term.length}`);
-                    console.log(`- Long-term goals: ${obj.long_term.length}`);
-
-                    // Insert short-term goals
-                    for (const shortTerm of obj.short_term) {
-                        try {
-                            await db.insert(goal).values({
-                                id: nanoid(),
-                                objectiveId: newObjective.id,
-                                action: shortTerm.action,
-                                timeframe: 'short_term',
-                                createdAt: now,
-                                updatedAt: now
-                            });
-                            console.log('Added short-term goal:', shortTerm.action.substring(0, 50) + '...');
-                        } catch (error) {
-                            console.error('Error inserting short-term goal:', error);
-                            throw error;
-                        }
-                    }
-
-                    // Insert medium-term goals
-                    for (const mediumTerm of obj.medium_term) {
-                        try {
-                            await db.insert(goal).values({
-                                id: nanoid(),
-                                objectiveId: newObjective.id,
-                                action: mediumTerm.action,
-                                timeframe: 'medium_term',
-                                createdAt: now,
-                                updatedAt: now
-                            });
-                            console.log('Added medium-term goal:', mediumTerm.action.substring(0, 50) + '...');
-                        } catch (error) {
-                            console.error('Error inserting medium-term goal:', error);
-                            throw error;
-                        }
-                    }
-
-                    // Insert long-term goals
-                    for (const longTerm of obj.long_term) {
-                        try {
-                            await db.insert(goal).values({
-                                id: nanoid(),
-                                objectiveId: newObjective.id,
-                                action: longTerm.action,
-                                timeframe: 'long_term',
-                                createdAt: now,
-                                updatedAt: now
-                            });
-                            console.log('Added long-term goal:', longTerm.action.substring(0, 50) + '...');
-                        } catch (error) {
-                            console.error('Error inserting long-term goal:', error);
-                            throw error;
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error processing objective:', error);
-                    throw error;
-                }
-            }
+            await createActionPlanWithObjectivesAndGoals(locals.user.id, parsedResponse.objectives);
+            
+            // Invalidate cache for the user
+            invalidateCache(locals.user.id);
+            
             console.log('Database operations completed successfully');
 
             // Return parsed response

@@ -1,9 +1,19 @@
-import { db } from './index';
+import { db } from '../index';
 import { eq } from 'drizzle-orm';
-import { actionPlan, objective, goal, task } from './schema';
-import type { User } from './schema';
-import type { ActionPlanSchema } from '$lib/schemas';
-import type { z } from 'zod';
+import { actionPlan, objective, goal } from '../schema';
+import type { User } from '../schema';
+import { transformToFrontendFormat } from '../../../adapters/current-plan-adapter';
+import { getGoalsForObjective } from './goals';
+import { getTasksForGoal } from './tasks';
+import { getCachedActionPlan, setCachedActionPlan } from '../../cache';
+
+// Define interfaces for the data structures
+interface ObjectiveInput {
+  name: string;
+  short_term: { action: string }[];
+  medium_term: { action: string }[];
+  long_term: { action: string }[];
+}
 
 export async function getUserActionPlan(userId: User['id']) {
   console.log('📊 [DB] Fetching action plan for user:', userId);
@@ -40,44 +50,72 @@ export async function getObjectivesForPlan(actionPlanId: string) {
   }
 }
 
-export async function getGoalsForObjective(objectiveId: string) {
-  console.log('📊 [DB] Fetching goals for objective:', objectiveId);
+export async function createActionPlanWithObjectivesAndGoals(userId: User['id'], objectives: ObjectiveInput[]) {
+  console.log('📊 [DB] Creating new action plan with objectives for user:', userId);
+  const now = new Date();
+  
   try {
-    const goals = await db
-      .select()
-      .from(goal)
-      .where(eq(goal.objectiveId, objectiveId))
-      .orderBy(goal.createdAt);
+    return await db.transaction(async (tx) => {
+      // Create action plan
+      const [newActionPlan] = await tx.insert(actionPlan).values({
+        id: crypto.randomUUID(),
+        userId,
+        createdAt: now,
+        updatedAt: now
+      }).returning();
 
-    console.log('📊 [DB] Found goals:', goals.length);
-    return goals;
-  } catch (error) {
-    console.error('❌ [DB] Error fetching goals:', error);
-    return [];
-  }
-}
+      // Create objectives and goals
+      for (const obj of objectives) {
+        const [newObjective] = await tx.insert(objective).values({
+          id: crypto.randomUUID(),
+          actionPlanId: newActionPlan.id,
+          name: obj.name,
+          createdAt: now,
+          updatedAt: now
+        }).returning();
 
-export async function getTasksForGoal(goalId: string) {
-  console.log('📊 [DB] Fetching tasks for goal:', goalId);
-  try {
-    const tasks = await db.transaction(async (tx) => {
-      return tx
-        .select()
-        .from(task)
-        .where(eq(task.goalId, goalId))
-        .orderBy(task.createdAt);
+        // Insert short-term goals
+        for (const shortTerm of obj.short_term) {
+          await tx.insert(goal).values({
+            id: crypto.randomUUID(),
+            objectiveId: newObjective.id,
+            action: shortTerm.action,
+            timeframe: 'short_term',
+            createdAt: now,
+            updatedAt: now
+          });
+        }
+
+        // Insert medium-term goals
+        for (const mediumTerm of obj.medium_term) {
+          await tx.insert(goal).values({
+            id: crypto.randomUUID(),
+            objectiveId: newObjective.id,
+            action: mediumTerm.action,
+            timeframe: 'medium_term',
+            createdAt: now,
+            updatedAt: now
+          });
+        }
+
+        // Insert long-term goals
+        for (const longTerm of obj.long_term) {
+          await tx.insert(goal).values({
+            id: crypto.randomUUID(),
+            objectiveId: newObjective.id,
+            action: longTerm.action,
+            timeframe: 'long_term',
+            createdAt: now,
+            updatedAt: now
+          });
+        }
+      }
+
+      return newActionPlan;
     });
-
-    console.log('📊 [DB] Found tasks:', tasks.length);
-    return tasks;
   } catch (error) {
-    console.error('❌ [DB] Error fetching tasks:', {
-      goalId,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      cause: error instanceof Error ? (error.cause as Error)?.message : undefined
-    });
-    return [];
+    console.error('❌ [DB] Error creating action plan:', error);
+    throw error;
   }
 }
 
@@ -133,63 +171,23 @@ export async function getFullActionPlan(userId: User['id']) {
   }
 }
 
-function transformToFrontendFormat(dbPlan: Awaited<ReturnType<typeof getFullActionPlan>>): z.infer<typeof ActionPlanSchema> | null {
-  console.log('🔄 Starting to transform data to frontend format');
-  try {
-    if (!dbPlan) {
-      console.log('🔄 No plan to transform');
-      return null;
-    }
-
-    const transformed = {
-      objectives: dbPlan.objectives.map(obj => ({
-        name: obj.name,
-        short_term: (obj.goals || [])
-          .filter(g => g.timeframe === 'short_term')
-          .map(g => ({ 
-            action: g.action,
-            tasks: (g.tasks || []).map(t => ({
-              description: t.description,
-              difficulty_level: t.difficultyLevel as "Easy" | "Medium" | "Hard",
-              estimated_time: t.estimatedTime
-            }))
-          })),
-        medium_term: (obj.goals || [])
-          .filter(g => g.timeframe === 'medium_term')
-          .map(g => ({ 
-            action: g.action,
-            tasks: (g.tasks || []).map(t => ({
-              description: t.description,
-              difficulty_level: t.difficultyLevel as "Easy" | "Medium" | "Hard",
-              estimated_time: t.estimatedTime
-            }))
-          })),
-        long_term: (obj.goals || [])
-          .filter(g => g.timeframe === 'long_term')
-          .map(g => ({ 
-            action: g.action,
-            tasks: (g.tasks || []).map(t => ({
-              description: t.description,
-              difficulty_level: t.difficultyLevel as "Easy" | "Medium" | "Hard",
-              estimated_time: t.estimatedTime
-            }))
-          }))
-      }))
-    };
-
-    console.log('🔄 Successfully transformed data');
-    return transformed;
-  } catch (error) {
-    console.error('❌ Error transforming data:', error);
-    return null;
-  }
-}
-
 export async function getFormattedActionPlan(userId: User['id']) {
   console.log('🎯 Starting to get formatted action plan for user:', userId);
   try {
+    // Check cache first
+    const cached = getCachedActionPlan(userId);
+    if (cached !== undefined) {
+      console.log('🎯 Returning cached action plan');
+      return cached;
+    }
+
     const plan = await getFullActionPlan(userId);
+    if (!plan) return null;
     const formatted = transformToFrontendFormat(plan);
+    
+    // Cache the result
+    setCachedActionPlan(userId, formatted);
+    
     console.log('🎯 Finished getting formatted action plan');
     return formatted;
   } catch (error) {

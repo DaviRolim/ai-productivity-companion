@@ -7,6 +7,7 @@ export const TaskSchema = z.object({
 });
 
 export const GoalSchema = z.object({
+  id: z.string(),
   action: z.string().describe("A specific action or goal to achieve"),
   tasks: z.array(TaskSchema).default([])
 });

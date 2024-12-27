@@ -59,9 +59,11 @@ export function transformToFrontendFormat(dbPlan: DbPlan): ActionPlan | null {
             id: g.id,
             action: g.action,
             tasks: (g.tasks || []).map(t => ({
+              id: t.id,
               description: t.description,
               difficulty_level: t.difficultyLevel as "Easy" | "Medium" | "Hard",
-              estimated_time: t.estimatedTime
+              estimated_time: t.estimatedTime,
+              completed: t.completed
             }))
           })),
         medium_term: (obj.goals || [])

@@ -101,12 +101,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             
             // Save tasks to database
             console.log(`Processing ${parsedResponse.objective.tasks.length} tasks...`);
-            await createTasksForGoal(goalRecord.id, parsedResponse.objective.tasks);
+            const createdTasks = await createTasksForGoal(goalRecord.id, parsedResponse.objective.tasks);
             console.log('Database operations completed successfully');
 
             return json({
                 success: true,
-                tasks: parsedResponse
+                tasks: {
+                    objective: {
+                        name: parsedResponse.objective.name,
+                        tasks: createdTasks
+                    }
+                }
             });
         } catch (dbError) {
             console.error('Database operation failed:', dbError);

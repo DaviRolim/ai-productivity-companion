@@ -5,6 +5,8 @@
 	import { slide } from 'svelte/transition';
 	import TaskCard from './TaskCard.svelte';
 
+	type Task = z.infer<typeof TaskSchema>;
+	
 	let {
 		goals,
 		type = 'short',
@@ -183,7 +185,17 @@
 								<div class="mt-4" transition:slide>
 									<div class="space-y-3">
 										{#each goal.tasks as task}
-											<TaskCard {task} />
+											<TaskCard 
+												{task}
+												onTaskUpdate={(updatedTask) => {
+													const taskIndex = goal.tasks.findIndex((t: Task) => t.id === updatedTask.id);
+													if (taskIndex !== -1) {
+														const newTasks = [...goal.tasks];
+														newTasks[taskIndex] = updatedTask;
+														goal.tasks = newTasks;
+													}
+												}}
+											/>
 										{/each}
 									</div>
 								</div>

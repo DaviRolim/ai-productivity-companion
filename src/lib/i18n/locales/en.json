@@ -9,7 +9,29 @@
     "getTasks": "Get Tasks",
     "actionableTasks": "Actionable Tasks:",
     "difficulty": "Difficulty: {level}",
-    "time": "Time: {duration}"
+    "time": "Time: {duration}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "action": "Enter goal action",
+    "deleteConfirm": "Are you sure you want to delete this?",
+    "deleteError": "Failed to delete",
+    "updateError": "Failed to update"
+  },
+  "tasks": {
+    "description": "Task description",
+    "difficultyEasy": "Easy",
+    "difficultyMedium": "Medium",
+    "difficultyHard": "Hard",
+    "estimatedTime": "Estimated time",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this task?",
+    "deleteError": "Failed to delete task",
+    "updateError": "Failed to update task"
   },
   "chat": {
     "placeholder": "Ask your AI companion...",

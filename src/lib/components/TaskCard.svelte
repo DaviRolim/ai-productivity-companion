@@ -7,10 +7,11 @@
   type Task = z.infer<typeof TaskSchema>;
   type DifficultyLevel = 'Easy' | 'Medium' | 'Hard';
   
-  let { task } = $props<{
+  let { task, onTaskUpdate } = $props<{
     task: Task;
+    onTaskUpdate: (task: Task) => void;
   }>();
-  
+
   const difficultyColors: Record<DifficultyLevel, string> = {
     'Easy': 'bg-green-700',
     'Medium': 'bg-yellow-600',
@@ -59,9 +60,13 @@
       });
       
       if (response.ok) {
-        task.description = editedDescription;
-        task.difficulty_level = editedDifficulty;
-        task.estimated_time = editedTime;
+        const updatedTask = {
+          ...task,
+          description: editedDescription,
+          difficulty_level: editedDifficulty,
+          estimated_time: editedTime
+        };
+        onTaskUpdate(updatedTask);
         isEditing = false;
       } else {
         alert($_('tasks.updateError'));
@@ -77,6 +82,33 @@
     editedDescription = task.description;
     editedDifficulty = task.difficulty_level;
     editedTime = task.estimated_time;
+  }
+
+  async function handleToggleComplete() {
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          description: task.description,
+          difficulty_level: task.difficulty_level,
+          estimated_time: task.estimated_time,
+          completed: !task.completed
+        })
+      });
+      
+      if (response.ok) {
+        const updatedTask = { ...task, completed: !task.completed };
+        onTaskUpdate(updatedTask);
+      } else {
+        alert($_('tasks.updateError'));
+      }
+    } catch (error) {
+      console.error('Failed to update task completion:', error);
+      alert($_('tasks.updateError'));
+    }
   }
 </script>
 
@@ -136,7 +168,15 @@
               </svg>
             </button>
             <div class="space-y-2">
-              <p class="text-white {isExpanded ? '' : 'line-clamp-2'}">{task.description}</p>
+              <div class="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={task.completed}
+                  onchange={handleToggleComplete}
+                  class="w-5 h-5 rounded-lg border-2 border-purple-400 text-purple-500 focus:ring-purple-400 focus:ring-offset-0 focus:ring-2 bg-slate-800 cursor-pointer"
+                />
+                <p class="text-white {isExpanded ? '' : 'line-clamp-2'} {task.completed ? 'line-through opacity-50' : ''}">{task.description}</p>
+              </div>
               <div class="flex flex-wrap gap-2">
                 <span class={`${difficultyColors[task.difficulty_level as DifficultyLevel]} text-xs px-3 py-1 rounded-lg font-medium`}>
                   {task.difficulty_level}

@@ -9,7 +9,29 @@
     "getTasks": "Ver Tarefas",
     "actionableTasks": "Tarefas Acionáveis:",
     "difficulty": "Dificuldade: {level}",
-    "time": "Tempo: {duration}"
+    "time": "Tempo: {duration}",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "action": "Digite a ação do objetivo",
+    "deleteConfirm": "Tem certeza que deseja excluir isso?",
+    "deleteError": "Falha ao excluir",
+    "updateError": "Falha ao atualizar"
+  },
+  "tasks": {
+    "description": "Descrição da tarefa",
+    "difficultyEasy": "Fácil",
+    "difficultyMedium": "Médio",
+    "difficultyHard": "Difícil",
+    "estimatedTime": "Tempo estimado",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "deleteConfirm": "Tem certeza que deseja excluir esta tarefa?",
+    "deleteError": "Falha ao excluir tarefa",
+    "updateError": "Falha ao atualizar tarefa"
   },
   "chat": {
     "placeholder": "Pergunte ao seu assistente IA...",

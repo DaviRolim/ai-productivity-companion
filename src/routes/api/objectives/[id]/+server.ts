@@ -1,8 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { objective } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { updateObjective, deleteObjective } from '$lib/server/db/mutations/objectives';
 import { invalidateCache } from '$lib/server/cache';
 
 export async function PATCH({ params, request, locals }: RequestEvent) {
@@ -13,14 +11,7 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
       return json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const [updatedObjective] = await db
-      .update(objective)
-      .set({
-        name,
-        updatedAt: new Date()
-      })
-      .where(eq(objective.id, params.id as string))
-      .returning();
+    const updatedObjective = await updateObjective(params.id as string, name);
 
     if (!updatedObjective) {
       return json({ error: 'Objective not found' }, { status: 404 });
@@ -40,10 +31,7 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
 
 export async function DELETE({ params, locals }: RequestEvent) {
   try {
-    const [deletedObjective] = await db
-      .delete(objective)
-      .where(eq(objective.id, params.id as string))
-      .returning();
+    const deletedObjective = await deleteObjective(params.id as string);
 
     if (!deletedObjective) {
       return json({ error: 'Objective not found' }, { status: 404 });

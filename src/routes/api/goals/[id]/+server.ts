@@ -1,8 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { goal } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { updateGoal, deleteGoal } from '$lib/server/db/mutations/goals';
 import { invalidateCache } from '$lib/server/cache';
 
 export async function PATCH({ params, request, locals }: RequestEvent) {
@@ -13,14 +11,7 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
       return json({ error: 'Action is required' }, { status: 400 });
     }
 
-    const [updatedGoal] = await db
-      .update(goal)
-      .set({
-        action,
-        updatedAt: new Date()
-      })
-      .where(eq(goal.id, params.id as string))
-      .returning();
+    const updatedGoal = await updateGoal(params.id as string, action);
 
     if (!updatedGoal) {
       return json({ error: 'Goal not found' }, { status: 404 });
@@ -40,10 +31,7 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
 
 export async function DELETE({ params, locals }: RequestEvent) {
   try {
-    const [deletedGoal] = await db
-      .delete(goal)
-      .where(eq(goal.id, params.id as string))
-      .returning();
+    const deletedGoal = await deleteGoal(params.id as string);
 
     if (!deletedGoal) {
       return json({ error: 'Goal not found' }, { status: 404 });

@@ -1,12 +1,10 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { task } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { updateTask, deleteTask } from '$lib/server/db/mutations/tasks';
 
 export async function PATCH({ params, request }: RequestEvent) {
   try {
-    const { description, difficulty_level, estimated_time } = await request.json();
+    const { description, difficulty_level, estimated_time, completed } = await request.json();
     
     if (!description?.trim()) {
       return json({ error: 'Description is required' }, { status: 400 });
@@ -20,16 +18,12 @@ export async function PATCH({ params, request }: RequestEvent) {
       return json({ error: 'Estimated time is required' }, { status: 400 });
     }
 
-    const [updatedTask] = await db
-      .update(task)
-      .set({
-        description,
-        difficultyLevel: difficulty_level,
-        estimatedTime: estimated_time,
-        updatedAt: new Date()
-      })
-      .where(eq(task.id, params.id as string))
-      .returning();
+    const updatedTask = await updateTask(params.id as string, {
+      description,
+      difficulty_level,
+      estimated_time,
+      completed
+    });
 
     if (!updatedTask) {
       return json({ error: 'Task not found' }, { status: 404 });
@@ -44,10 +38,7 @@ export async function PATCH({ params, request }: RequestEvent) {
 
 export async function DELETE({ params }: RequestEvent) {
   try {
-    const [deletedTask] = await db
-      .delete(task)
-      .where(eq(task.id, params.id as string))
-      .returning();
+    const deletedTask = await deleteTask(params.id as string);
 
     if (!deletedTask) {
       return json({ error: 'Task not found' }, { status: 404 });

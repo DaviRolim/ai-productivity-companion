@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 export const TaskSchema = z.object({
+  id: z.string(),
   description: z.string(),
   difficulty_level: z.enum(["Easy", "Medium", "Hard"]),
-  estimated_time: z.string()
+  estimated_time: z.string(),
+  completed: z.boolean().default(false)
 });
 
 export const GoalSchema = z.object({
